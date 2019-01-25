@@ -1,0 +1,53 @@
+﻿  panorama.cpp
+c:\users\sgks_liuyj\source\repos\2r_allroad\project2\panorama.cpp(81): warning C4244: “=”: 从“int”转换到“_Tp”，可能丢失数据
+          with
+          [
+              _Tp=float
+          ]
+c:\users\sgks_liuyj\source\repos\2r_allroad\project2\panorama.cpp(82): warning C4244: “=”: 从“int”转换到“_Tp”，可能丢失数据
+          with
+          [
+              _Tp=float
+          ]
+c:\users\sgks_liuyj\source\repos\2r_allroad\project2\panorama.cpp(83): warning C4244: “=”: 从“int”转换到“_Tp”，可能丢失数据
+          with
+          [
+              _Tp=float
+          ]
+c:\users\sgks_liuyj\source\repos\2r_allroad\project2\panorama.cpp(84): warning C4244: “=”: 从“int”转换到“_Tp”，可能丢失数据
+          with
+          [
+              _Tp=float
+          ]
+c:\users\sgks_liuyj\source\repos\2r_allroad\project2\panorama.cpp(114): warning C4244: “参数”: 从“double”转换到“_Tp”，可能丢失数据
+          with
+          [
+              _Tp=int
+          ]
+c:\users\sgks_liuyj\source\repos\2r_allroad\project2\panorama.cpp(116): warning C4244: “参数”: 从“double”转换到“_Tp”，可能丢失数据
+          with
+          [
+              _Tp=int
+          ]
+c:\users\sgks_liuyj\source\repos\2r_allroad\project2\panorama.cpp(123): warning C4244: “参数”: 从“double”转换到“_Tp”，可能丢失数据
+          with
+          [
+              _Tp=int
+          ]
+c:\users\sgks_liuyj\source\repos\2r_allroad\project2\panorama.cpp(128): warning C4244: “参数”: 从“double”转换到“_Tp”，可能丢失数据
+          with
+          [
+              _Tp=int
+          ]
+c:\users\sgks_liuyj\source\repos\2r_allroad\project2\panorama.cpp(154): warning C4244: “=”: 从“double”转换到“_Tp”，可能丢失数据
+          with
+          [
+              _Tp=float
+          ]
+c:\users\sgks_liuyj\source\repos\2r_allroad\project2\panorama.cpp(545): warning C4244: “初始化”: 从“double”转换到“int”，可能丢失数据
+  正在生成代码
+  1 of 720 functions ( 0.1%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    2 functions had inline decision re-evaluated but remain unchanged
+  已完成代码的生成
+  Project2.vcxproj -> C:\Users\sgks_Liuyj\source\repos\2R_ALLroad\x64\Release\canny.exe
