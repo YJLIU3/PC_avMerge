@@ -176,17 +176,32 @@ void mix_image_front(Mat image1, Mat image2, Mat alpha, Mat alpha_1, Mat& output
 #endif
 }
 
-void mix_image_rear(Mat image1, Mat image2, Mat alpha, Mat alpha_1, Mat& output)
+void mix_image_rear(Mat &image1, Mat &image2, double width)
 {
-#if 1
+#if 0
 
-	Mat Image1_ROI = image1(Rect(0, 0, 630, image1.rows - 240));
-	Mat Image2_ROI = image2(Rect(0, 0, 630, image1.rows - 240));
+	Mat Image1_ROI = image1(Rect(0, 0, 630, image1.rows - 300));
+	Mat Image2_ROI = image2(Rect(0, 0, 630, image1.rows - 300));
 	Image1_ROI.copyTo(Image2_ROI);
 	//imwrite("Image1_ROI.png", Image1_ROI);
 	output = image2;
 #else
-	addWeighted(image1, 0.9, image2, 0.2, 3, output);
+	Mat Image1_ROI = image1(Rect(0, 0, 640, image1.rows - 300));
+	Mat Image2_ROI = image2(Rect(0, 0, 640, image1.rows - 300));
+	Image1_ROI.copyTo(Image2_ROI);
+	for (int i = image1.rows - 300; i < image1.rows - abs(width); i++)
+	{
+		float alpha = (i - image1.rows + 300) / (300 - abs(width));
+		for (int j = 0; j < image1.cols; j++)
+		{
+			Vec4b t = image2.at<Vec4b>(i, j);
+			image2.at<Vec4b>(i, j)[0] = alpha * image2.at<Vec4b>(i, j)[0] + (1 - alpha) * image1.at<Vec4b>(i, j)[0];
+			image2.at<Vec4b>(i, j)[1] = alpha * image2.at<Vec4b>(i, j)[1] + (1 - alpha) * image1.at<Vec4b>(i, j)[1];
+			image2.at<Vec4b>(i, j)[3] = alpha * image2.at<Vec4b>(i, j)[3] + (1 - alpha) * image1.at<Vec4b>(i, j)[3];
+			image2.at<Vec4b>(i, j)[2] = alpha * image2.at<Vec4b>(i, j)[2] + (1 - alpha) * image1.at<Vec4b>(i, j)[2];
+		}
+	}
+	
 #endif
 }
 
@@ -379,7 +394,7 @@ Mat Panorama::rear_process(Mat front, Mat rear, Mat test_mat)
 	StrStm >> imageFileName;
 	imageFileName += ".bmp";
 
-	imwrite("img/" + imageFileName, rear);
+	imwrite("img/" + imageFileName, test_mat);
 
 	if (bypast_cont > 23)
 		bypast_cont = 0;
@@ -430,15 +445,24 @@ Mat Panorama::rear_process(Mat front, Mat rear, Mat test_mat)
 
 		Mat c_rear_be = Mat::zeros(im1.size(), CV_8UC1);
 		Mat c_rear_no = Mat::zeros(im1.size(), CV_8UC1);
-		test_before.copyTo(c_rear_be(Rect((im1.cols - test_before.cols) / 2, (im1.rows - test_before.rows), test_before.cols, test_before.rows)));
-		test_now.copyTo(c_rear_no(Rect((im1.cols - test_before.cols) / 2, (im1.rows - test_before.rows), test_before.cols, test_before.rows)));
+//		test_before.copyTo(c_rear_be(Rect((im1.cols - test_before.cols) / 2, (im1.rows - test_before.rows), test_before.cols, test_before.rows)));
+//		test_now.copyTo(c_rear_no(Rect((im1.cols - test_before.cols) / 2, (im1.rows - test_before.rows), test_before.cols, test_before.rows)));
 		clock_t b = clock();
 		if (DEBUG_MSG)
 			cout << "Before matrix Running time  is: " << static_cast<double>(b - a) / CLOCKS_PER_SEC * 1000 << "ms" << endl;
 		float angle;
 		clock_t warp_st1 = clock();
-		Mat matrix = LogPolarFFTTemplateMatch(test_before, test_now, angle, 200, 100, idx);
-//		Mat matrix = match_by_line(test_before, test_now);
+		Mat matrix = LogPolarFFTTemplateMatch(test_now, test_before, angle, 200, 100, idx);
+		Mat gad;
+//		warpAffine(rear_before, gad, matrix, Size(rear_before.cols + 20, rear_before.rows + 20));
+		warpAffine(test_before, gad, matrix, Size(test_before.cols + 20, test_before.rows + 20));
+	
+		double cos_theta = matrix.at<double>(0, 0);
+		double sin_theta = matrix.at<double>(1, 0);
+
+		matrix.at<double>(0, 2) += 35 - 35 * cos_theta + 980 * sin_theta;
+		matrix.at<double>(1, 2) += 980 - 35 * sin_theta - 980 * cos_theta;
+		//		Mat matrix = match_by_line(test_before, test_now);
 		//Mat rot_mat = getRotationMatrix2D(Point(160, 524), angle, 1.0);
 		//matrix = matrix + rot_mat;
 	
@@ -523,15 +547,15 @@ Mat Panorama::rear_process(Mat front, Mat rear, Mat test_mat)
 
 		}
 
-		mix_image_rear(im1t, im2, alpha, alpha_1, ims);
+		mix_image_rear(im1t, im2, matrix.at<double>(1, 2));
 
 		rear_before = rear_now.clone();
 		test_before = test_now;
-		im1 = ims.clone();
+		im1 = im2.clone();
 		imMask1 = imMaskS;
 		imTime1 = imTime;
 
-		output = ims.clone();
+		output = im2.clone();
 		if (DEBUG_MSG_IMG)
 			imwrite("debug/output.png", output);
 

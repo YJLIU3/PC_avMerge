@@ -345,9 +345,8 @@ int main(int argc, char **argv)
 			cout << "image " << idx0++ << endl;
 
 
-			if (idx0 > 3900 && (idx0%1 ==0))
+			if (idx0 > 2200 && (idx0%5 ==0))
 			{
-
 				{
 					cvtColor(frontimage, front_image, COLOR_BGR2BGRA);
 					cvtColor(rearimage, rear_image, COLOR_BGR2BGRA);
@@ -369,7 +368,7 @@ int main(int argc, char **argv)
 
 					output = av_merge_image(front_image, rear_image, 1, input_cali);
 					imshow("out", output);
-					waitKey(10);
+					waitKey(100);
 				
 
 				}
@@ -388,8 +387,8 @@ int main(int argc, char **argv)
 
 int isColor = 1;
 int fps = 30;
-int frameWidth = 320;
-int frameHeight = 640;
+int frameWidth = 640;
+int frameHeight = 1280;
 VideoWriter writer("avmerge.avi", VideoWriter::fourcc('M', 'J', 'P', 'G'), fps, Size(frameWidth, frameHeight), isColor);
 Mat back_trs = Mat::zeros(Size(260, 180), CV_8UC4);
 Mat av_merge(Mat front_image, Mat rear_image, bool Reversing, Mat test_mat)
@@ -433,7 +432,7 @@ Mat av_merge(Mat front_image, Mat rear_image, bool Reversing, Mat test_mat)
 			cout << "###############################rear process Running time  is: " << static_cast<double>(end_process - end_remap) / CLOCKS_PER_SEC * 1000 << "ms#####################" << endl;
 		out = pa.rear_process(front_trs, rear_trs, test_mat);
 		cvtColor(out, out, COLOR_BGRA2BGR);
-//		writer.write(out);
+		writer.write(out);
 	}
 	return out;
 }

@@ -654,44 +654,78 @@ float logpolar(Mat& src, Mat& dst)
 	return log_base;
 }
 
-Mat LogPolarFFTTemplateMatch(Mat im0, Mat im1, float &agl, double canny_threshold1, double canny_threshold2, int idx)
+Mat LogPolarFFTTemplateMatch(Mat im0_1, Mat im1_1, float &agl, double canny_threshold1, double canny_threshold2, int idx)
 {
-	//im0 ==== before
-	//im1 ==== now
-//	Canny(im1, im1, 100, 200, 3, 1);
+	Mat im0 = im0_1.clone();
+	Mat im1 = im1_1.clone();
+	CV_Assert((im0.type() == CV_8UC1) || (im0.type() == CV_8UC3) ||
+		(im0.type() == CV_32FC1) || (im0.type() == CV_32FC3) ||
+		(im0.type() == CV_64FC1) || (im0.type() == CV_64FC3));
 
-//	threshold(im1, im1, 50, 200, CV_THRESH_BINARY);
+	CV_Assert(im0.rows == im1.rows && im0.cols == im1.cols);
 
-	static float bypass_angle[10];
-	static int angle_cnt = 0;
-	static float angle_back = 0;
+	CV_Assert(im0.channels() == 1 || im0.channels() == 3 || im0.channels() == 4);
 
-	Mat im1_ROI_Rect = im1.clone();//(Rect(0, 0, im1.cols, 200))
-	Mat im0_ROI_Rect = im0.clone();//(Rect(0, 0, im1.cols, 200))
-	
-	Mat im1_ROI = im1.clone();
-	Mat im0_ROI = im0.clone();
-	
-	if (im1_ROI_Rect.type() != CV_8UC1)
-		cvtColor(im1_ROI_Rect, im1_ROI_Rect, CV_BGRA2GRAY);
-	if (im0_ROI_Rect.type() != CV_8UC1)
-		cvtColor(im0_ROI_Rect, im0_ROI_Rect, CV_BGRA2GRAY);
+	CV_Assert(im1.channels() == 1 || im1.channels() == 3 || im1.channels() == 4);
 
-	Canny(im1_ROI_Rect, im1_ROI_Rect, 100, 200, 3, 1);
-	Canny(im0_ROI_Rect, im0_ROI_Rect, 100, 200, 3, 1);
-	if (im1_ROI_Rect.type() != CV_32FC1)
-		im1_ROI_Rect.convertTo(im1_ROI_Rect, CV_32FC1, 1.0 / 255.0);
-	if (im0_ROI_Rect.type() != CV_32FC1)
-		im0_ROI_Rect.convertTo(im0_ROI_Rect, CV_32FC1, 1.0 / 255.0);
+	Mat im0_tmp = im0.clone();
+	Mat im1_tmp = im1.clone();
+	if (im0.channels() == 3)
+	{
+		cvtColor(im0, im0, cv::COLOR_BGR2GRAY);
+	}
+
+	if (im0.channels() == 4)
+	{
+		cvtColor(im0, im0, cv::COLOR_BGRA2GRAY);
+	}
+
+	if (im1.channels() == 3)
+	{
+		cvtColor(im1, im1, cv::COLOR_BGR2GRAY);
+	}
+
+	if (im1.channels() == 4)
+	{
+		cvtColor(im1, im1, cv::COLOR_BGRA2GRAY);
+	}
+
+	if (im0.type() == CV_32FC1)
+	{
+		im0.convertTo(im0, CV_8UC1, 255.0);
+	}
+
+	if (im1.type() == CV_32FC1)
+	{
+		im1.convertTo(im1, CV_8UC1, 255.0);
+	}
+
+	if (im0.type() == CV_64FC1)
+	{
+		im0.convertTo(im0, CV_8UC1, 255.0);
+	}
+
+	if (im1.type() == CV_64FC1)
+	{
+		im1.convertTo(im1, CV_8UC1, 255.0);
+	}
+
+
+	Canny(im0, im0, canny_threshold1, canny_threshold2); // you can change this
+	Canny(im1, im1, canny_threshold1, canny_threshold2);
+
+	// Ensure both images are of CV_32FC1 type
+	im0.convertTo(im0, CV_32FC1, 1.0 / 255.0);
+	im1.convertTo(im1, CV_32FC1, 1.0 / 255.0);
 
 	Mat F0[2], F1[2];
 	Mat f0, f1;
-	ForwardFFT(im0_ROI_Rect, F0);
-	ForwardFFT(im1_ROI_Rect, F1);
+	ForwardFFT(im0, F0);
+	ForwardFFT(im1, F1);
 	magnitude(F0[0], F0[1], f0);
 	magnitude(F1[0], F1[1], f1);
 
-
+	// Create filter 
 	Mat h;
 	highpass(f0.size(), h);
 
@@ -706,14 +740,14 @@ Mat LogPolarFFTTemplateMatch(Mat im0, Mat im1, float &agl, double canny_threshol
 	log_base = logpolar(f1, f1lp);
 
 	// Find rotation and scale
-	Point2d rotation_and_scale = cv::phaseCorrelate(f0lp, f1lp);
+	Point2d rotation_and_scale = cv::phaseCorrelate(f1lp, f0lp);
 
 	float angle = 180.0 * rotation_and_scale.y / f0lp.rows;
 	float scale = pow(log_base, rotation_and_scale.x);
 	// --------------
 	if (scale > 1.8)
 	{
-		rotation_and_scale = cv::phaseCorrelate(f0lp, f1lp);
+		rotation_and_scale = cv::phaseCorrelate(f1lp, f0lp);
 		angle = -180.0 * rotation_and_scale.y / f0lp.rows;
 		scale = 1.0 / pow(log_base, rotation_and_scale.x);
 		if (scale > 1.8)
@@ -725,104 +759,58 @@ Mat LogPolarFFTTemplateMatch(Mat im0, Mat im1, float &agl, double canny_threshol
 	if (angle < -90.0)
 	{
 		angle += 180.0;
-	}
+}
 	else if (angle > 90.0)
 	{
 		angle -= 180.0;
 	}
-	angle = angle * 1.0;
-#if 0
-	if (abs(angle- angle_back) > 15.0)
-		angle = angle_back;
-	angle_cnt = angle_cnt % 10;
-	bypass_angle[angle_cnt] = angle;
-	static bool overflow = false;
-	if (angle_cnt == 4)
-		overflow = true;
-	if (!overflow)
-	{
-		angle = 0.0;
-		for (int i = 0; i < angle_cnt; i++)
-		{
-			angle += bypass_angle[i] / (angle_cnt + 1);
-		}
-	}
-	else
-	{
-		angle = 0.0;
-		for (int i = 0; i < 5; i++)
-		{
-			angle += bypass_angle[i] / 5.0;
-		}
-	}
-	angle_cnt++;
-	agl = angle;
-#endif
 
 	// Now rotate and scale fragment back, then find translation
-	Mat rot_mat = getRotationMatrix2D(Point(im1.cols / 2, im1.rows / 2), angle, 1.0 );
-	Mat rot_mat1 = getRotationMatrix2D(Point(320, 640), angle, 1.0);
-	angle_back = angle;
+	Mat rot_mat = getRotationMatrix2D(Point(im1.cols / 2, im1.rows / 2), angle, 1.0 / scale);
+
 	// rotate and scale
-	Mat im0_rs;
+	Mat im1_rs;
+	warpAffine(im1, im1_rs, rot_mat, im1.size());
+	warpAffine(im1_tmp, im1_tmp, rot_mat, im1.size());
 
-	warpAffine(im0_ROI, im0_rs, rot_mat, im1.size(), 0);
+	//cvtColor(im0_tmp, im0_tmp, CV_BGR2GRAY);
+	//cvtColor(im1_tmp, im1_tmp, CV_BGR2GRAY);
+	im0_tmp.convertTo(im0_tmp, CV_32FC1);
+	im1_tmp.convertTo(im1_tmp, CV_32FC1);
+	// find translation
+	Point2d tr = cv::phaseCorrelate(im0, im1_rs);
 
-	if (im1_ROI.type() != CV_8UC1)
-		cvtColor(im1_ROI, im1_ROI, CV_BGRA2GRAY);
-	if (im0_rs.type() != CV_8UC1)
-		cvtColor(im0_rs, im0_rs, CV_BGRA2GRAY);
-	if (im1_ROI.type() != CV_32FC1)
-		im1_ROI.convertTo(im1_ROI, CV_32FC1, 1.0 / 255.0);
-	if (im0_rs.type() != CV_32FC1)
-		im0_rs.convertTo(im0_rs, CV_32FC1, 1.0 / 255.0);
-	if (im0_ROI.type() != CV_32FC1)
-		im0_ROI.convertTo(im0_ROI, CV_32FC1, 1.0 / 255.0);
+	// compute rotated rectangle parameters
+	RotatedRect rr;
+	rr.center = tr + Point2d(im0.cols / 2, im0.rows / 2);
+	rr.angle = -angle;
+	rr.size.width = im1.cols / scale;
+	rr.size.height = im1.rows / scale;
 
-	clock_t a = clock();
-	Point2d tr = phaseCorrelate(im1_ROI, im0_rs);
-	clock_t b = clock();
-	if (DEBUG_MSG)
-		cout << "PhaseCorrelate time  is: " << static_cast<double>(b - a) / CLOCKS_PER_SEC * 1000 << "ms" << endl;
-
-	Mat mov_mat = Mat::zeros(Size(3, 2), CV_64FC1);
-
+	Mat mov_mat = Mat::zeros(Size(3, 3), CV_64FC1);
+	Mat art_mat = Mat::zeros(Size(3, 3), CV_64FC1);
 	mov_mat.at<double>(0, 0) = 1.0;
-	mov_mat.at<double>(0, 1) = 0.0;
-	mov_mat.at<double>(1, 0) = 0.0;
 	mov_mat.at<double>(1, 1) = 1.0;
-
-	mov_mat.at<double>(0, 2) = tr.x;
+	mov_mat.at<double>(0, 2) = -tr.x;
 	mov_mat.at<double>(1, 2) = -tr.y;
-	cout << mov_mat << endl;
+	mov_mat.at<double>(2, 2) = 1.0;
+	art_mat.at<double>(2, 2) = 1.0;
+	memcpy(art_mat.data, rot_mat.data, sizeof(double) * 6);
+	Mat t_mat = Mat::zeros(Size(3, 2), CV_64FC1);
+	memcpy(t_mat.data, mov_mat.data, sizeof(double) * 6);
+	mov_mat = mov_mat * art_mat;
+	Mat ret_mat = Mat::zeros(Size(3, 2), CV_64FC1);
+	memcpy(ret_mat.data, mov_mat.data, sizeof(double) * 6);
 
-	static ofstream file;
-	static bool ini_file = 1;
-	
-	if (ini_file)
-	{
-		ini_file = false;
-		file.open("parameter.txt");
-		if (!file);
-	}
-	Mat rot_mat_3 = Mat::zeros(Size(3, 3), CV_64FC1);
-	Mat mov_mat_3 = Mat::zeros(Size(3, 3), CV_64FC1);
-	Mat mer_mat_3 = Mat::zeros(Size(3, 3), CV_64FC1);
-	Mat out_mat_2 = Mat::zeros(Size(3, 2), CV_64FC1);
-	mov_mat_3.at<double>(2, 2) = 1.0;
-	rot_mat_3.at<double>(2, 2) = 1.0;
-	memcpy(rot_mat_3.data, rot_mat.data, sizeof(double) * 6);
-	memcpy(mov_mat_3.data, mov_mat.data, sizeof(double) * 6);
-	mer_mat_3 = rot_mat_3 * mov_mat_3;
-	memcpy(out_mat_2.data, mer_mat_3.data, sizeof(double) * 6);
+	warpAffine(im1_tmp, im1_tmp, t_mat, Size(280, 200));
 
-	file << "idx£º" << idx << endl;
-	file << "angle£º" << angle << endl;
-	file << "dx£º " << mov_mat.at<double>(0, 2) << "    dy: "<< mov_mat.at<double>(1, 2) <<endl;
-	file << " ============================================================ " << endl;
-	file <<  out_mat_2;
+	im0_tmp.convertTo(im0_tmp, CV_8UC1);
+	im1_tmp.convertTo(im1_tmp, CV_8UC1);
 
-	return out_mat_2;
+	im0 = im0_tmp.clone();
+	im1 = im1_tmp.clone();
+
+	return ret_mat;
 }
 Mat test_LogPolarFFTTemplateMatch(Mat im0, Mat im1, double canny_threshold1, double canny_threshold2, int idx)
 {
